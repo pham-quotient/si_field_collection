@@ -1,0 +1,13 @@
+name = SI Field Collection Formatters
+description = Adds custom field formatter for Field Collection fields
+core = 7.x
+package = Smithsonian Instituion
+
+dependencies[] = ctools
+dependencies[] = flexslider
+dependencies[] = field_collection
+dependencies[] = jquery_update
+dependencies[] = si_custom
+
+; Files
+files[] = theme/si_field_collection.theme.inc

@@ -1,0 +1,473 @@
+<?php
+/**
+ * @file
+ * Provides a Flex Slider formatter for Field Collection fields.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function si_field_collection_theme() {
+  return array(
+    'si_field_collection_tabs' => array(
+      'variables' => array(
+        'titles' => array(),
+        'tabs' => array(),
+				'tabMode' => '',
+        'field_name' => NULL,
+				'tabID' => NULL,
+      ),
+      'file' => 'theme/si_field_collection.theme.inc',
+    ),
+    'si_field_collection_accordion' => array(
+      'variables' => array(
+        'titles' => array(),
+        'tabs' => array(),
+				'tabID' => NULL,
+				'open_tab' => NULL,
+      ),
+	    'file' => 'theme/si_field_collection.theme.inc',
+    ),
+    'si_field_collection_tabs_tab_title' => array(
+      'variables' => array(
+        'title' => NULL,
+				'tabMode' => NULL,
+        'tab_id' => NULL,
+				'open_tab' => NULL,
+      ),
+			'file' => 'theme/si_field_collection.theme.inc',
+    ),
+    'si_field_collection_tabs_tab' => array(
+      'variables' => array(
+        'tab' => NULL,
+        'tab_id' => NULL,
+				'tabMode' => '',
+				'title' => NULL,
+				'open_tab' => NULL,
+      ),
+      'file' => 'theme/si_field_collection.theme.inc',
+    ),
+    'si_flexslider' => array(
+      'variables' => array('items' => array(), 'settings' => array()),
+      'template' => 'theme/si-flexslider',
+      'file' => 'theme/si_field_collection.theme.inc',
+    ),		
+		
+  );
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function si_field_collection_field_formatter_info() {
+  return array(
+    'si_field_collection_entity_flexslider' => array(
+      'label' => t('FlexSlider Field Collection'),
+      'description' => t('Displays the rendered entities in a FlexSlider.'),
+      'field types' => array('field_collection'),
+      'settings' => array(
+				'link_field' => '',
+				'image_field' => '',
+        'optionset' => '',
+				'caption_fields' => array(),
+        'view_mode' => '',
+				'direction' => 'horizontal',
+      ),
+    ),
+	  'si_field_collection_entity_theme' => array(
+      'label' => t('Color Scheme Field Collection'),
+      'description' => t('Set the color scheme for the field collection.'),
+      'field types' => array('field_collection'),
+      'settings' => array(
+				'theme_field' => '',
+        'view_mode' => 'full'
+      ),
+    ),
+    'si_field_collection_tabs' => array(
+      'label' => t('Responsive Tabs'),
+      'description' => t('Renders each field collection item on a responsive tab'),
+      'field types' => array(
+        'field_collection'
+      ),
+      'settings' => array(
+        'title_field' => 0,
+				'tab_mode' => 'responsive_tab',
+        'view_mode' => 'full',
+				'open_tab' => FALSE,
+      )
+    )
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function si_field_collection_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+	$form = array();
+	$fields = field_info_instances('field_collection_item', $field['field_name']);
+	foreach ($fields as $field_name => $field) {
+		$options[$field_name] = $field['label'];
+	}
+	$entity_info = entity_get_info('field_collection_item');
+	$modes = array();
+	if (!empty($entity_info['view modes'])) {
+		foreach ($entity_info['view modes'] as $view_mode => $view_mode_settings) {
+			$modes[$view_mode] = $view_mode_settings['label'];
+		}
+	}
+
+	switch ($display['type']) {
+		case 'si_field_collection_entity_flexslider':
+			$link_fields = array_merge(array(t('No Link')), $options);
+			$form['link_field'] = array(
+				'#type' => 'select',
+				'#title' => t('Link Field'),
+				'#description' => t('Select the field to use to link the slides.'),
+				'#default_value' => $settings['link_field'],
+				'#options' => $link_fields
+			);
+			$form['image_field'] = array(
+				'#type' => 'select',
+				'#title' => t('Image Field'),
+				'#default_value' => $settings['image_field'],
+				'#options' => $options
+			);			
+			//$position_fields = array_merge(array(t('N/A')), $options);
+			$form['caption_fields'] = array(
+				'#type' => 'checkboxes',
+				'#title' => t('Caption Position'),
+				'#description' => t('Select the fields that makeup the caption.'),
+				'#default_value' => $settings['caption_fields'],
+				'#options' => $options
+			);
+			$form['direction'] = array(
+				'#type' => 'radios',
+				'#title' => t('Slide Direction'),
+				'#default_value' => $settings['direction'],
+				'#options' => array(
+					'horizontal' => t('Horizontal'),
+					'vertical' => t('Vertical')
+				)
+			);
+			
+			// Creates a select list for the Flex Slider option set.
+			$optionsets = array();
+			ctools_include('export');
+			foreach (flexslider_optionset_load_all() as $name => $optionset) {
+				$optionsets[$name] = $optionset->title;
+			}
+			$form['optionset'] = array(
+				'#title' => t('Option set'),
+				'#type' => 'select',
+				'#options' => $optionsets,
+				'#default_value' => $settings['optionset'],
+			);
+
+			// Creates a select list for the slide view modes.
+			if (count($modes) > 1) {
+				$form['view_mode'] = array(
+					'#type' => 'select',
+					'#options' => $modes,
+					'#title' => t('Slide view mode'),
+					'#default_value' => $settings['view_mode'],
+				);
+			}
+		break;
+		case 'si_field_collection_entity_theme':
+			$options = array_merge(array(t('No theme')), $options);
+			$form['theme_field'] = array(
+				'#type' => 'select',
+				'#title' => t('Theme Field'),
+				'#description' => t('Select the field to use to set the theme.'),
+				'#default_value' => $settings['theme_field'],
+				'#options' => $options
+			);
+
+    $form['view_mode'] = array(
+      '#type' => 'select',
+      '#title' => t('View mode'),
+      '#options' => $modes,
+      '#default_value' => $settings['view_mode'],
+      '#description' => t('Select the view mode'),
+    );
+		break;
+		case 'si_field_collection_tabs':
+	    $options = array_merge(array(t('No Title')), $options);
+			$form['title_field'] = array(
+				'#type' => 'select',
+				'#title' => t('Field to use for tab titles'),
+				'#description' => t('Select the field to use for tab titles'),
+				'#default_value' => $settings['title_field'],
+				'#options' => $options
+			);
+			$form['tab_mode'] = array(
+				'#type' => 'select',
+				'#title' => t('Tab Mode'),
+				'#default_value' => $settings['tab_mode'],
+				'#options' => array(
+					'menu_tab' => t('Menu List'),
+					'responsive_tab' => t('Tab/Accordion'),
+					'accordion_tab' => t('Accordion'),
+				)
+			);
+			$form['open_tab'] = array(
+				'#type' => 'checkbox',
+				'#title' => t('Expand first tab?'),
+				'#description' => t('This setting only applies to Accordion tabs.'),
+				'#default_value' => $settings['open_tab'],
+			);
+
+			$form['view_mode'] = array(
+				'#type' => 'select',
+				'#title' => t('View mode'),
+				'#options' => $modes,
+				'#default_value' => $settings['view_mode'],
+				'#description' => t('Select the view mode'),
+			);
+		break;
+	}
+
+
+  return $form;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function si_field_collection_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+	$fields = field_info_instances('field_collection_item', $field['field_name']);
+  $summary = array();
+	$entity_type = entity_get_info('field_collection_item');
+	if (!empty($entity_type['view modes'][$settings['view_mode']]['label'])) {
+		$summary[] =  t('View mode: @mode', array('@mode' => $entity_type['view modes'][$settings['view_mode']]['label']));
+	}
+
+	switch($display['type']) {
+		case 'si_field_collection_entity_flexslider':
+			// Load the Flex Slider option set.
+			ctools_include('export');
+			if (!empty($settings['optionset'])) {
+				$optionset = flexslider_optionset_load($settings['optionset']);
+			}
+			if (!empty($settings['link_field'])) {
+				variable_set( $field['field_name'] .'_link_field', $settings['link_field']);
+			}
+			// Build the settings summary.
+			$optionset = isset($optionset) ? $optionset->title : t('Default settings');
+			$summary[] = t('Option set: %optionset', array('%optionset' => $optionset));
+			$summary[] = !empty($settings['link_field']) ? t('Link field: %link', array('%link' => $fields[$settings['link_field']]['label'])) : '';
+			$summary[] = !empty($settings['image_field']) ? t('Image field: %image', array('%image' => $fields[$settings['image_field']]['label'])) : '';
+			$summary[] = !empty($settings['caption_fields']) ? t('Caption fields: %fields', array('%fields' => implode(', ', $settings['caption_fields']))) : '';
+			$summary[] = !empty($settings['direction']) ? t('Slide direction: %direction', array('%direction' => $settings['direction'])) : '';
+			$entity_info = entity_get_info('field_collection_item');
+			$summary[] = t('Slides rendered as @mode', array('@mode' => isset($entity_info['view modes'][$settings['view_mode']]['label']) ? $entity_info['view modes'][$settings['view_mode']]['label'] : 'default'));
+		break;
+		case 'si_field_collection_entity_theme':
+			$summary[] = !empty($settings['theme_field']) ? t('theme field: %theme_field', array(
+					'%theme_field' => $fields[$settings['theme_field']]['label'])) : t('No theme field');
+		break;
+		case 'si_field_collection_tabs':
+			$summary[] = !empty($settings['title_field']) ? t('Title field: %title_field', array(
+					'%title_field' => $fields[$settings['title_field']]['label'])) : t('No title');
+			$summary[] = !empty($settings['tab_mode']) ? t('Tab Mode: %tab_field', array(
+					'%tab_field' => $settings['tab_mode'])) : '';
+					$expand = !empty($settings['open_tab']) ? t('Yes') : ('No');
+			$summary[] = !empty($settings['open_tab']) ? t('Expand first tab: %open_tab', array(
+					'%open_tab' => $expand)) : '';
+		break;
+	}
+
+  return implode('<br />', $summary);
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function si_field_collection_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $settings = $display['settings'];
+  $element = array();
+
+	switch ($display['type']) {
+		case 'si_field_collection_entity_flexslider':
+			$result = $titles = array();
+			$position = '';
+			$view_mode = !empty($display['settings']['view_mode']) ? $display['settings']['view_mode'] : 'full';
+			foreach ($items as $delta => $item) {
+				if ($fc = field_collection_field_get_entity($item)) {
+					$link = array();
+					$view    = $fc->view($view_mode);
+					$id      = array_keys($view['field_collection_item']);
+					$id      = reset($id);
+					$fields  = $view['field_collection_item'][$id];
+					$caption = FALSE;
+					
+
+		//			if (!empty($settings['caption_position'])) {
+//						$pos_field = $settings['caption_position'];
+//						$wrapper = entity_metadata_wrapper('field_collection_item', $fc);
+//						$position = $wrapper->{$pos_field}->value();
+//					}
+					$link_field = $display['settings']['link_field'];
+					$image_field = $display['settings']['image_field'];
+					
+					if (!empty($link_field) && isset($fields[$link_field])) {
+						if (!empty($fields[$link_field])) {
+							$path = $fields[$link_field]['#items'];
+							$path = reset($path);
+							$url = array_shift($path);
+							$options = $path;
+							$link = array(
+									'url' => $url,
+									'options' => $options,
+							);
+							unset($view['field_collection_item'][$id][$link_field]);
+							$link_path = '<a href="' . check_plain(url($url, $options)) . '"' . drupal_attributes($options['attributes']) . '>';
+						}
+					}
+					$image = drupal_render($view['field_collection_item'][$id][$image_field]);
+					unset($view['field_collection_item'][$id][$image_field]);
+//					$caption = '';
+//					$caption .= '<pre>'. print_r($view['field_collection_item'][$id]) .'</pre>';
+					foreach ($settings['caption_fields'] as $caption_name) {
+						if (!empty($view['field_collection_item'][$id][$caption_name])) {
+							$caption = TRUE;
+							break;
+						}
+					}
+//					$caption = empty($view['field_collection_item'][$id]) ? FALSE : TRUE;
+					//$output = $caption ? drupal_render($view['field_collection_item'][$id]) : '';
+					if (isset($link_path)) {
+						$result[$delta] = array(
+							'slide' => $link_path . $image .'</a>',
+						);
+						if ($caption) {
+							if ($settings['direction'] == 'vertical') {
+								$out = drupal_render($view['field_collection_item'][$id]);
+								$out .= '<div class="read-more">'. $link_path . t('Learn more') .'</a>';
+							}
+							else {
+								$out = $link_path. drupal_render($view['field_collection_item'][$id]) .'</a>';
+							}
+							$result[$delta]['caption'] =  $out;
+						}
+						
+					}
+					else {
+						$result[$delta] = array(
+							'slide' =>  $image,
+						);
+						if ($caption) {
+							$result[$delta]['caption'] = drupal_render($view['field_collection_item'][$id]);
+						}					
+					}
+				}
+			}
+
+			if (count($result) > 0) {
+				$element[] = array(
+					'#theme' => 'si_flexslider',
+					'#items' => $result,
+					'#settings' => $display['settings'],
+					'#attached' => 	array(
+						'library' => array(
+							array('si_custom', 'breakpoints')
+						)
+					),
+				);
+			}
+		break;
+		case 'si_field_collection_entity_theme':
+			$view_mode = !empty($display['settings']['view_mode']) ? $display['settings']['view_mode'] : 'full';
+      foreach ($items as $delta => $item) {
+        if ($fc = field_collection_field_get_entity($item)) {
+					if (!empty($settings['theme_field'])) {
+						$theme_field = $settings['theme_field'];
+						$wrapper = entity_metadata_wrapper('field_collection_item', $fc);
+						$theme = $wrapper->{$theme_field}->value();
+						$element[$delta]['#attributes']['class'][] = empty($theme) ? '' : 'block-theme-content';
+						$element[$delta]['#attributes']['class'][] = empty($theme) ? 'block-theme-default' : drupal_clean_css_identifier('block_theme_'. $theme);
+						$element[$delta]['#attributes']['class'][] = 'l-block-content';
+					}
+					$element[$delta]['entity'] = $fc->view($view_mode);
+          $element[$delta]['#theme_wrappers'] = array('field_collection_view');
+          $element[$delta]['#attributes']['class'][] = 'field-collection-view';
+          $element[$delta]['#attributes']['class'][] = drupal_clean_css_identifier('view-mode-' . $view_mode);
+        }
+      }
+		break;
+		case 'si_field_collection_tabs':
+      $titles = $tabs = $attached = array();
+			switch ($display['settings']['tab_mode']) {
+				case 'accordion_tab':
+					$theme = 'si_field_collection_accordion';
+					$attached = array(
+						'library' => array(array('si_custom', 'bootstrap')),
+					);
+				break;
+				default:
+					$theme = 'si_field_collection_tabs';
+					$attached = array(
+						'js' => array(
+							drupal_get_path('module', 'si_field_collection') . '/js/jquery.responsiveTabs.js',
+							drupal_get_path('module', 'si_field_collection') . '/js/si_responsive_tabs.js'
+						),
+						// 'css' => array(
+						// 	drupal_get_path('module', 'si_field_collection') . '/css/responsive-tabs.css'
+						// ),
+					);
+				break;
+			}
+      $title_field = !empty($display['settings']['title_field']) ? $display['settings']['title_field'] : FALSE;
+      $view_mode = !empty($display['settings']['view_mode']) ? $display['settings']['view_mode'] : 'full';
+			$tabID = drupal_clean_css_identifier('si-field-collection-tabs-'. rand());
+
+      foreach ($items as $delta => $item) {
+        if ($fc = field_collection_field_get_entity($item)) {
+					$view    = $fc->view($view_mode);
+					$id      = array_keys($view['field_collection_item']);
+					$id      = reset($id);
+					$fields  = $view['field_collection_item'][$id];
+          if ($title_field) {
+						$wrapper = entity_metadata_wrapper('field_collection_item', $fc);
+            $titles[$delta] =  $wrapper->{$title_field}->value();
+						if (isset($fields[$title_field])) {
+							unset($fields[$title_field]);
+						}
+          }
+          else {
+            $titles[$delta] = t('Tab @delta', array(
+              '@delta' => $delta
+            ));
+          }
+          $tabs[$delta] = drupal_render($fields);
+        }
+      }
+			$ids[$tabID] =  array(
+				'mode' => $display['settings']['tab_mode'],
+				'open' => $display['settings']['tab_mode'],
+			);
+      drupal_add_js(array('siResponsiveTabs' => array('tabIDs' => $ids)), 'setting');
+
+			$element[] = array(
+        '#theme' => $theme,
+        '#titles' => $titles,
+        '#tabs' => $tabs,
+				'#tabID' => $tabID,
+				'#open_tab' => $display['settings']['open_tab'],
+				'#tabMode' => $display['settings']['tab_mode'],
+        '#field_name' => $field['field_name'],
+        '#prefix' => '<div class="si-tabs '.  drupal_clean_css_identifier($display['settings']['tab_mode']) .'" id="'.$tabID .'">',
+        '#suffix' => '</div>',
+        '#attached' => $attached,
+      );
+		break;
+	}
+
+
+  return $element;
+}
+

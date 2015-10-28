@@ -1,0 +1,69 @@
+/* Tabs container */
+
+.r-tabs {
+	position: relative;
+}
+
+.responsive-tab.r-tabs .r-tabs-nav {
+    margin: 0;
+    padding: 0;
+}
+
+/* Disabled tab */
+.r-tabs .r-tabs-nav .r-tabs-state-disabled {
+	opacity: 0.5;
+}
+
+/* Tab anchor */
+.responsive-tab.r-tabs .r-tabs-nav .r-tabs-anchor {
+	text-decoration: none;
+	display:inline-block;
+}
+
+.r-tabs-nav .r-tabs-tab {
+    margin: 0;
+		padding:0;
+    list-style: none;
+}
+.responsive-tab.r-tabs .r-tabs-nav .r-tabs-tab {
+    display: block;
+}
+.responsive-tab.r-tabs .r-tabs-tab {
+		float:left;
+}
+
+
+
+.r-tabs .r-tabs-accordion-title {
+    display: none;
+}
+
+.r-tabs .r-tabs-panel {
+   display: none;
+}
+
+
+.r-tabs .r-tabs-panel.r-tabs-state-active {
+    display: block;
+}
+
+
+.menu_tab .r-tabs-nav, .menu_tab .tab-wrapper {
+	float: left;
+}
+.menu_tab .r-tabs-nav {
+	width: 20%;
+}
+.menu_tab .tab-wrapper {
+	width: 80%;
+}
+/* Accordion responsive breakpoint */
+@media only screen and (max-width: 768px) {
+    .r-tabs .r-tabs-nav {
+        display: none;
+    }
+
+    .r-tabs .r-tabs-accordion-title {
+        display: block;
+    }
+}

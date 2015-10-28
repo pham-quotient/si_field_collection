@@ -1,0 +1,1 @@
+Requires jQuery (minimaly jQuery 1.7.0)
